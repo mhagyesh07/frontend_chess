@@ -1,15 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import useSocket from '../hooks/useSocket';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const { socket, isConnected, connectionError } = useSocket();
-  const [gameState, setGameState] = useState(null);
-  const [players, setPlayers] = useState([]);
+  // Removed unused state: gameState, players
   const [gameSessionInfo, setGameSessionInfo] = useState(null);
   const [userRole, setUserRole] = useState(null); // 'white', 'black', 'spectator', or null
   const [userStats, setUserStats] = useState(null);
+  const requestGameState = useCallback(() => { // Wrapped in useCallback
+    if (socket && isConnected) {
+      socket.emit('requestGameState');
+    } else {
+      console.error('Not connected to server');
+    }
+  }, [socket, isConnected]); // Added dependencies for useCallback
 
   useEffect(() => {
     if (!socket) return;
@@ -32,7 +38,7 @@ const Dashboard = () => {
 
     socket.on('playerJoined', (data) => {
       console.log('Player joined:', data);
-      setPlayers(prev => [...prev.filter(p => p.username !== data.username), data]);
+      // Removed setPlayers as it's not used
       
       // Force refresh game state when a new player joins
       setTimeout(() => {
@@ -43,20 +49,17 @@ const Dashboard = () => {
 
     socket.on('playerReconnected', (data) => {
       console.log('Player reconnected:', data);
-      setPlayers(prev => [...prev.filter(p => p.username !== data.username), data]);
+      // Removed setPlayers as it's not used
     });
 
     socket.on('playerLeft', (data) => {
       console.log('Player left:', data);
-      setPlayers(prev => prev.filter(p => p.username !== data.username));
+      // Removed setPlayers as it's not used
     });
 
     socket.on('boardState', (fen) => {
       console.log('Board state updated:', fen);
-      setGameState(prev => ({
-        ...prev,
-        board: fen
-      }));
+      // Removed setGameState as it's not used
     });
 
     socket.on('moveDetails', (data) => {
@@ -65,11 +68,7 @@ const Dashboard = () => {
 
     socket.on('gameOver', (data) => {
       console.log('Game over:', data);
-      setGameState(prev => ({
-        ...prev,
-        status: 'completed',
-        result: data.result
-      }));
+      // Removed setGameState as it's not used
       // Refresh user stats after game completion
       setTimeout(() => {
         requestUserStats();
@@ -78,7 +77,7 @@ const Dashboard = () => {
 
     socket.on('newGameStarted', () => {
       console.log('New game started');
-      setGameState(null);
+      // Removed setGameState as it's not used
     });
 
     socket.on('error', (error) => {
@@ -103,7 +102,7 @@ const Dashboard = () => {
       socket.off('newGameStarted');
       socket.off('error');
     };
-  }, [socket, isConnected, user]);
+  }, [socket, isConnected, user, requestGameState]); // Added requestGameState to dependency array
 
   // Debug effect to log when gameSessionInfo changes
   useEffect(() => {
@@ -114,14 +113,9 @@ const Dashboard = () => {
     }
   }, [gameSessionInfo, user, userRole]);
 
-  const sendMove = (move) => {
-    if (socket && isConnected) {
-      socket.emit('move', move);
-    } else {
-      console.error('Not connected to server');
-    }
-  };
-
+  // Removed unused function: sendMove
+  // eslint-disable-next-line no-use-before-define
+  
   const startNewGame = () => {
     if (socket && isConnected) {
       socket.emit('newGame');
@@ -130,13 +124,13 @@ const Dashboard = () => {
     }
   };
 
-  const requestGameState = () => {
-    if (socket && isConnected) {
-      socket.emit('requestGameState');
-    } else {
-      console.error('Not connected to server');
-    }
-  };
+  // const requestGameState = useCallback(() => { // Wrapped in useCallback
+  //   if (socket && isConnected) {
+  //     socket.emit('requestGameState');
+  //   } else {
+  //     console.error('Not connected to server');
+  //   }
+  // }, [socket, isConnected]); // Added dependencies for useCallback
 
   const requestUserStats = async () => {
     try {
